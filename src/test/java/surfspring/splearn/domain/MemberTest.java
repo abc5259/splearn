@@ -3,27 +3,36 @@ package surfspring.splearn.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class MemberTest {
+    Member member;
+    PasswordEncoder passwordEncoder;
+
+    @BeforeEach
+    void setUp() {
+        passwordEncoder = new PasswordEncoder() {
+            @Override
+            public String encode(String password) {
+                return password.toUpperCase();
+            }
+
+            @Override
+            public boolean matches(String password, String passwordHash) {
+                return encode(password).equals(passwordHash);
+            }
+        };
+        member = Member.create(new MemberCreateRequest("surf@splearn.com", "surf", "secret"), passwordEncoder);
+    }
 
     @Test
     void createMember() {
-        var member = new Member("surf@splearn.com", "surf", "secret");
-
         assertThat(member.getStatus()).isEqualTo(MemberStatus.PENDING);
     }
 
     @Test
-    void constructorNullCheck() {
-        assertThatThrownBy(() -> new Member(null, "surf", "secret"))
-                .isInstanceOf(NullPointerException.class);
-    }
-
-    @Test
     void activate() {
-        var member = new Member("surf@splearn.com", "surf", "secret");
-
         member.activate();
 
         assertThat(member.getStatus()).isEqualTo(MemberStatus.ACTIVE);
@@ -31,8 +40,6 @@ class MemberTest {
 
     @Test
     void activateFail() {
-        var member = new Member("surf@splearn.com", "surf", "secret");
-
         member.activate();
 
         assertThatThrownBy(member::activate)
@@ -41,7 +48,6 @@ class MemberTest {
 
     @Test
     void deactivate() {
-        var member = new Member("surf@splearn.com", "surf", "secret");
         member.activate();
 
         member.deactivate();
@@ -51,15 +57,12 @@ class MemberTest {
 
     @Test
     void deactivateFail() {
-        var member = new Member("surf@splearn.com", "surf", "secret");
-
         assertThatThrownBy(member::deactivate)
                 .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     void deactivateFail2() {
-        var member = new Member("surf@splearn.com", "surf", "secret");
         member.activate();
         member.deactivate();
 
@@ -67,4 +70,47 @@ class MemberTest {
                 .isInstanceOf(IllegalStateException.class);
     }
 
+    @Test
+    void verifyPassword() {
+        assertThat(member.verifyPassword("secret", passwordEncoder)).isTrue();
+        assertThat(member.verifyPassword("hello", passwordEncoder)).isFalse();
+    }
+
+    @Test
+    void changeNickname() {
+        assertThat(member.getNickname()).isEqualTo("surf");
+
+        member.changeNickname("serf");
+
+        assertThat(member.getNickname()).isEqualTo("serf");
+    }
+
+    @Test
+    void changePassword() {
+        member.changePassword("verySecret", passwordEncoder);
+
+        assertThat(member.verifyPassword("verySecret", passwordEncoder)).isTrue();
+    }
+
+    @Test
+    void isActive() {
+        assertThat(member.isActive()).isFalse();
+
+        member.activate();
+
+        assertThat(member.isActive()).isTrue();
+
+        member.deactivate();
+
+        assertThat(member.isActive()).isFalse();
+    }
+
+    @Test
+    void invalidEmail() {
+        assertThatThrownBy(() -> {
+            Member.create(new MemberCreateRequest("invalid email", "surf", "secret"), passwordEncoder);
+        }).isInstanceOf(IllegalArgumentException.class);
+
+        Member.create(new MemberCreateRequest("surf@gmail.com", "surf", "secret"), passwordEncoder);
+    }
 }
