@@ -2,6 +2,8 @@ package surfspring.splearn.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static surfspring.splearn.domain.MemberFixture.createMemberRegisterRequest;
+import static surfspring.splearn.domain.MemberFixture.createPasswordEncoder;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,18 +14,8 @@ class MemberTest {
 
     @BeforeEach
     void setUp() {
-        passwordEncoder = new PasswordEncoder() {
-            @Override
-            public String encode(String password) {
-                return password.toUpperCase();
-            }
-
-            @Override
-            public boolean matches(String password, String passwordHash) {
-                return encode(password).equals(passwordHash);
-            }
-        };
-        member = Member.register(new MemberRegisterRequest("surf@splearn.com", "surf", "secret"), passwordEncoder);
+        passwordEncoder = createPasswordEncoder();
+        member = Member.register(createMemberRegisterRequest(), passwordEncoder);
     }
 
     @Test
@@ -108,9 +100,9 @@ class MemberTest {
     @Test
     void invalidEmail() {
         assertThatThrownBy(() -> {
-            Member.register(new MemberRegisterRequest("invalid email", "surf", "secret"), passwordEncoder);
+            Member.register(createMemberRegisterRequest("invalid email"), passwordEncoder);
         }).isInstanceOf(IllegalArgumentException.class);
 
-        Member.register(new MemberRegisterRequest("surf@gmail.com", "surf", "secret"), passwordEncoder);
+        Member.register(createMemberRegisterRequest(), passwordEncoder);
     }
 }
