@@ -2,6 +2,9 @@ package surfspring.splearn.application;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
+import surfspring.splearn.application.provided.MemberFinder;
 import surfspring.splearn.application.provided.MemberRegister;
 import surfspring.splearn.application.required.EmailSender;
 import surfspring.splearn.application.required.MemberRepository;
@@ -12,8 +15,11 @@ import surfspring.splearn.domain.MemberRegisterRequest;
 import surfspring.splearn.domain.PasswordEncoder;
 
 @Service
+@Transactional
+@Validated
 @RequiredArgsConstructor
-public class MemberService implements MemberRegister {
+public class MemberModifyService implements MemberRegister {
+    private final MemberFinder memberFinder;
     private final MemberRepository memberRepository;
     private final EmailSender emailSender;
     private final PasswordEncoder passwordEncoder;
@@ -29,6 +35,15 @@ public class MemberService implements MemberRegister {
         sendWelcomeEmail(member);
 
         return member;
+    }
+
+    @Override
+    public Member activate(Long memberId) {
+        Member member = memberFinder.find(memberId);
+
+        member.activate();
+
+        return memberRepository.save(member);
     }
 
     private void checkDuplicateEmail(MemberRegisterRequest registerRequest) {
